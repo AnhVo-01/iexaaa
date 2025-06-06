@@ -192,7 +192,8 @@ namespace IEXAAA
                     }
 
                     // Gọi hàm xử lý
-                    await UpsertSanPhamAsync(maSPNB, maSPKH, thuocTinhValues["tenSanPham"], thuocTinhValues, thuocTinhList, currentTime);
+                    var newDict = thuocTinhValues.Where(kvp => kvp.Key != "tenSanPham").ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                    await UpsertSanPhamAsync(maSPNB, maSPKH, thuocTinhValues["tenSanPham"], newDict, thuocTinhList, currentTime);
 
 
                     processedRows++;
@@ -455,7 +456,7 @@ namespace IEXAAA
             }
         }
 
-        private async void button2_Click(object sender, EventArgs e)
+        private async void CheckUpdate(object sender, EventArgs e)
         {
             checkLoad.Visible = true;
 
@@ -513,6 +514,7 @@ namespace IEXAAA
 
         private async void btn_install_Click(object sender, EventArgs e)
         {
+            btn_install.Enabled = false;
             if (latestInstaller == null)
             {
                 MessageBox.Show("Không tìm thấy file cài đặt.");
