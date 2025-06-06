@@ -1,12 +1,19 @@
 ﻿using DBConnect;
 using DevExpress.Spreadsheet;
+using Dto;
+using IEXAAA.Dto;
 using Model;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.Entity;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Reflection;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -16,14 +23,20 @@ namespace IEXAAA
     {
         private readonly IEDBContext _DbConnect;
         private volatile bool isCancelled = false;
+        private GithubAsset latestInstaller;
 
         public Main()
         {
             InitializeComponent();
             _DbConnect = new IEDBContext();
+            appVersion.Text = "Current version: " + Assembly.GetExecutingAssembly().GetName().Version.ToString();
 
             btn_import.Enabled = false;
             btn_cancel.Visible = false;
+            btn_install.Visible = false;
+            checkLoad.Visible = false;
+            panel1.Visible = false;
+            panel2.Visible = false;
         }
 
         private void Btn_Select(object sender, EventArgs e)
@@ -49,7 +62,11 @@ namespace IEXAAA
 
             if (btn_import.Text == "Finish")
             {
-                Application.Exit();
+                //Application.Exit();
+                file_url.Text = null;
+                btn_import.Text = "Import";
+                btn_select.Enabled = true;
+                return;
             }
 
             if (!File.Exists(filePath))
@@ -73,6 +90,17 @@ namespace IEXAAA
 
         private void Main_Load(object sender, EventArgs e)
         {
+            tabControl.SelectedIndexChanged += tabControl_SelectedIndexChanged;
+        }
+
+        private void tabControl_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            // Kiểm tra nếu tab hiện tại là tab ánh xạ
+            var selectedTab = tabControl.SelectedTab;
+            if (selectedTab != null && selectedTab.Name == "tabPage2")
+            {
+                LoadColumnMappingFromJson();
+            }
         }
 
         private void InputFilePath(object sender, EventArgs e)
@@ -139,29 +167,33 @@ namespace IEXAAA
 
                 try
                 {
+                    // Các cột cố định
                     string maSPNB = columnB.Trim();
                     string maSPKH = columnC.Trim();
-                    string bagType = cells[i, 3].Value?.ToString();
-                    string tenSanPham = cells[i, 4].Value?.ToString();
-                    string dimension = cells[i, 5].Value?.ToString();
-                    string thickness = cells[i, 6].Value?.ToString();
-                    string bagWeight = cells[i, 7].Value?.ToString();
-                    string pcs = cells[i, 8].Value?.ToString();
-                    string cartonRolls = cells[i, 9].Value?.ToString();
-                    string cartonWeight = cells[i, 10].Value?.ToString();
+                    string tenSanPham = "";
 
-                    var thuocTinhValues = new Dictionary<string, string>
+                    // Load từ JSON
+                    string jsonPath = Path.Combine(Application.StartupPath, "column_mapping.json");
+
+                    if (!File.Exists(jsonPath))
+                        return;
+
+                    string json = File.ReadAllText(jsonPath);
+                    var columnMappings = JsonSerializer.Deserialize<List<ColumnMapping>>(json);
+                    var thuocTinhValues = new Dictionary<string, string>();
+
+                    foreach (var kvp in columnMappings)
                     {
-                        { "bagType", bagType },
-                        { "dimension", dimension },
-                        { "thickness", thickness },
-                        { "bagWeight", bagWeight },
-                        { "pcs", pcs },
-                        { "cartonRolls", cartonRolls },
-                        { "cartonWeight", cartonWeight }
-                    };
+                        string propertyName = kvp.PropertyCode;
+                        string columnIndex = kvp.ExcelCol;
 
-                    await UpsertSanPhamAsync(maSPNB, maSPKH, tenSanPham, thuocTinhValues, thuocTinhList, currentTime);
+                        var cellValue = cells[columnIndex + (i + 1)].Value?.ToString();
+                        thuocTinhValues[propertyName] = cellValue;
+                    }
+
+                    // Gọi hàm xử lý
+                    await UpsertSanPhamAsync(maSPNB, maSPKH, thuocTinhValues["tenSanPham"], thuocTinhValues, thuocTinhList, currentTime);
+
 
                     processedRows++;
                     int percent = (int)((double)processedRows / totalRows * 100);
@@ -245,6 +277,8 @@ namespace IEXAAA
                         existing.TenSanPham = tenSanPham;
                         existing.UpdatedDate = currentTime;
                         sanPhamId = existing.Id;
+
+                        await _DbConnect.SaveChangesAsync();
                     }
 
                     foreach (var kvp in thuocTinhValues)
@@ -252,7 +286,6 @@ namespace IEXAAA
                         UpsertThuocTinh(sanPhamId, kvp.Key, kvp.Value, thuocTinhs, currentTime);
                     }
 
-                    await _DbConnect.SaveChangesAsync();
                     transaction.Commit(); // Chỉ commit khi mọi thứ xong xuôi
 
                     return sanPhamId;
@@ -260,43 +293,52 @@ namespace IEXAAA
                 catch (Exception ex)
                 {
                     transaction.Rollback(); // Nếu lỗi, rollback toàn bộ
-                    throw new Exception("Có lỗi khi lưu sản phẩm: " + ex.Message, ex);
+                    throw new Exception(ex.Message, ex);
                 }
             }
         }
 
         private void UpsertThuocTinh(int spId, string maThuocTinh, string value, List<DMThuocTinh> thuocTinhs, DateTime time)
         {
-            if (string.IsNullOrWhiteSpace(value))
-                return;
-
-            var thuocTinhId = thuocTinhs
-                .FirstOrDefault(x => x.MaThuocTinh.Equals(maThuocTinh, StringComparison.OrdinalIgnoreCase))?.Id;
-
-            if (thuocTinhId == null)
-                return;
-
-            var existingThuocTinh = _DbConnect.SanPhamThuocTinh
-                .FirstOrDefault(x => x.SanPhamId == spId
-                    && x.ThuocTinhSPId == thuocTinhId
-                    && x.FlagDel == 0);
-
-            if (existingThuocTinh == null)
+            try
             {
-                _DbConnect.SanPhamThuocTinh.Add(new SanPhamThuocTinh
+                if (string.IsNullOrWhiteSpace(value))
+                    return;
+
+                var thuocTinhId = thuocTinhs
+                    .FirstOrDefault(x => x.MaThuocTinh.Equals(maThuocTinh, StringComparison.OrdinalIgnoreCase))?.Id;
+
+                if (thuocTinhId == null)
+                    return;
+
+                var existingThuocTinh = _DbConnect.SanPhamThuocTinh
+                    .FirstOrDefault(x => x.SanPhamId == spId
+                        && x.ThuocTinhSPId == thuocTinhId
+                        && x.FlagDel == 0);
+
+                if (existingThuocTinh == null)
                 {
-                    SanPhamId = spId,
-                    ThuocTinhSPId = thuocTinhId.Value,
-                    NoiDung = value,
-                    FlagDel = 0,
-                    CreatedDate = time,
-                    UpdatedDate = time
-                });
+                    _DbConnect.SanPhamThuocTinh.Add(new SanPhamThuocTinh
+                    {
+                        SanPhamId = spId,
+                        ThuocTinhSPId = thuocTinhId.Value,
+                        NoiDung = value,
+                        FlagDel = 0,
+                        CreatedDate = time,
+                        UpdatedDate = time
+                    });
+                }
+                else
+                {
+                    existingThuocTinh.NoiDung = value;
+                    existingThuocTinh.UpdatedDate = time;
+
+                    _DbConnect.SaveChanges();
+                }
             }
-            else
+            catch (Exception ex)
             {
-                existingThuocTinh.NoiDung = value;
-                existingThuocTinh.UpdatedDate = time;
+                throw new Exception(ex.Message, ex);
             }
         }
 
@@ -322,6 +364,190 @@ namespace IEXAAA
             else
             {
                 MessageBox.Show("Cannot find template.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void LoadColumnMappingFromJson()
+        {
+            string jsonPath = Path.Combine(Application.StartupPath, "column_mapping.json");
+
+            if (!File.Exists(jsonPath))
+                return;
+
+            string json = File.ReadAllText(jsonPath);
+            var mappings = JsonSerializer.Deserialize<List<ColumnMapping>>(json);
+
+            dgvMapping.Rows.Clear(); // clear old data
+
+            foreach (var mapping in mappings)
+            {
+                dgvMapping.Rows.Add(mapping.Property, mapping.PropertyCode, mapping.ExcelCol);
+            }
+        }
+
+        private void saveSetting(object sender, EventArgs e)
+        {
+            List<ColumnMapping> mappings = new List<ColumnMapping>();
+
+            foreach (DataGridViewRow row in dgvMapping.Rows)
+            {
+                if (row.IsNewRow) continue; // Bỏ dòng trống cuối cùng
+
+                var mapping = new ColumnMapping
+                {
+                    Property = row.Cells["propertyName"].Value?.ToString(),
+                    PropertyCode = row.Cells["property"].Value?.ToString(),
+                    ExcelCol = row.Cells["excelCol"].Value?.ToString()
+                };
+
+                mappings.Add(mapping);
+            }
+
+            // Chuyển đổi thành JSON
+            string json = JsonSerializer.Serialize(mappings, new JsonSerializerOptions { WriteIndented = true });
+
+            // Đường dẫn mặc định (AppDomain.CurrentDomain.BaseDirectory) sẽ lưu file ngay cạnh file .exe
+            string outputPath = Path.Combine(Application.StartupPath, "column_mapping.json");
+
+            try
+            {
+                File.WriteAllText(outputPath, json);
+                MessageBox.Show("Save mapping successful:\n" + outputPath, "Notification", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error when saving the file:\n" + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void btn_load_Click(object sender, EventArgs e)
+        {
+            var thuocTinhList = _DbConnect.DMThuocTinh
+                .Where(x => x.CongTyId == 1 && x.FlagDel == 0)
+                .ToList();
+
+            foreach (var prop in thuocTinhList)
+            {
+                string property = prop.TenThuocTinh;
+                string propertyCode = prop.MaThuocTinh;
+
+                // Tìm dòng có propertyCode tương ứng
+                bool updated = false;
+                foreach (DataGridViewRow row in dgvMapping.Rows)
+                {
+                    if (row.IsNewRow) continue;
+
+                    string existingCode = row.Cells["property"].Value?.ToString();
+                    if (existingCode == propertyCode)
+                    {
+                        // Nếu đã tồn tại, cập nhật lại property (giữ excelCol cũ)
+                        row.Cells["property"].Value = property;
+                        updated = true;
+                        break;
+                    }
+                }
+
+                // Nếu chưa có, thêm dòng mới
+                if (!updated)
+                {
+                    dgvMapping.Rows.Add(property, propertyCode, null); // excelCol để user chọn
+                }
+            }
+        }
+
+        private async void button2_Click(object sender, EventArgs e)
+        {
+            checkLoad.Visible = true;
+
+            using (var client = new HttpClient())
+            {
+                client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("iexaaa", "1.0"));
+
+                var response = await client.GetAsync("https://api.github.com/repos/AnhVo-01/iexaaa/releases/latest");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    MessageBox.Show("Không thể kiểm tra cập nhật.");
+                    return;
+                }
+
+                var json = await response.Content.ReadAsStringAsync();
+                var release = JsonSerializer.Deserialize<GithubRelease>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+                if (release != null)
+                {
+                    Version latest = ParseVersion(release.TagName);
+                    Version current = Assembly.GetExecutingAssembly().GetName().Version;
+
+                    if (latest > current)
+                    {
+                        latestInstaller = release.Assets.FirstOrDefault(a =>
+                            a.Name.EndsWith(".exe") || a.Name.EndsWith(".msi"));
+
+                        if (latestInstaller != null)
+                        {
+                            btn_install.Visible = true;
+                            checkLoad.Visible = false;
+                            panel2.Visible = true;
+                            label4.Text = "New version: " + latest;
+                        }
+                    }
+                    else
+                    {
+                        checkLoad.Visible = false;
+                        panel1.Visible = true;
+                    }
+                }
+            }
+        }
+
+        private Version ParseVersion(string tag)
+        {
+            // Giả sử tag dạng "v1.2.3" hoặc "1.2.3"
+            var clean = tag.StartsWith("v") ? tag.Substring(1) : tag;
+            return new Version(clean);
+        }
+
+        private async void btn_install_Click(object sender, EventArgs e)
+        {
+            if (latestInstaller == null)
+            {
+                MessageBox.Show("Không tìm thấy file cài đặt.");
+                return;
+            }
+
+            string tempPath = Path.Combine(Path.GetTempPath(), latestInstaller.Name);
+
+            using (var client = new HttpClient())
+            {
+                try
+                {
+                    var data = await client.GetByteArrayAsync(latestInstaller.BrowserDownloadUrl);
+                    File.WriteAllBytes(tempPath, data);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Lỗi khi tải file cập nhật: {ex.Message}");
+                    return;
+                }
+            }
+
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = tempPath,
+                    UseShellExecute = true
+                });
+
+                Application.Exit(); // Thoát app hiện tại để chạy bản cập nhật
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Không thể chạy file cài đặt: {ex.Message}");
             }
         }
     }
