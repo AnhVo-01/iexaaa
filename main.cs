@@ -14,6 +14,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reflection;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -24,6 +25,7 @@ namespace IEXAAA
         private readonly IEDBContext _DbConnect;
         private volatile bool isCancelled = false;
         private GithubAsset latestInstaller;
+        private CancellationTokenSource downloadCts;
 
         public Main()
         {
@@ -37,6 +39,8 @@ namespace IEXAAA
             checkLoad.Visible = false;
             panel1.Visible = false;
             panel2.Visible = false;
+            lblProgress.Visible = false;
+            progressInstall.Visible = false;
         }
 
         private void Btn_Select(object sender, EventArgs e)
@@ -504,45 +508,101 @@ namespace IEXAAA
 
         private async void btn_install_Click(object sender, EventArgs e)
         {
+            progressInstall.Value = 0;
+            progressInstall.Visible = true;
             btn_install.Enabled = false;
-            btn_install.Text = "Downloading...";
+
+            if (btn_install.Text == "Cancel") {
+                downloadCts?.Cancel();
+                btn_install.Text = "Install";
+                btn_install.Enabled = true;
+                return;
+            }
 
             if (latestInstaller == null)
             {
-                MessageBox.Show("Không tìm thấy file cài đặt.");
+                MessageBox.Show("Installation file not found.");
                 return;
             }
 
             string tempPath = Path.Combine(Path.GetTempPath(), latestInstaller.Name);
-
-            using (var client = new HttpClient())
-            {
-                try
-                {
-                    var data = await client.GetByteArrayAsync(latestInstaller.BrowserDownloadUrl);
-                    File.WriteAllBytes(tempPath, data);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Lỗi khi tải file cập nhật: {ex.Message}");
-                    return;
-                }
-            }
+            downloadCts = new CancellationTokenSource();
+            var token = downloadCts.Token;
 
             try
             {
+                using (var client = new HttpClient())
+                using (var response = await client.GetAsync(latestInstaller.BrowserDownloadUrl, HttpCompletionOption.ResponseHeadersRead, token))
+                {
+                    lblProgress.Visible = true;
+                    btn_install.Text = "Cancel";
+                    btn_install.Enabled = true;
+                    response.EnsureSuccessStatusCode();
+
+                    var totalBytes = response.Content.Headers.ContentLength ?? -1L;
+                    var canReportProgress = totalBytes != -1;
+
+                    using (var contentStream = await response.Content.ReadAsStreamAsync())
+                    using (var fileStream = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                    {
+                        var buffer = new byte[8192];
+                        long totalRead = 0;
+                        int read;
+
+                        while ((read = await contentStream.ReadAsync(buffer, 0, buffer.Length, token)) > 0)
+                        {
+                            await fileStream.WriteAsync(buffer, 0, read, token);
+                            totalRead += read;
+
+                            if (canReportProgress)
+                            {
+                                int percent = (int)(totalRead * 100 / totalBytes);
+                                progressInstall.Value = Math.Min(percent, 100);
+
+                                lblProgress.Text = $"Downloading...{FormatBytes(totalRead)} / {FormatBytes(totalBytes)} ({percent}%)";
+                            }
+                            else
+                            {
+                                lblProgress.Text = $"Downloaded: {FormatBytes(totalRead)}";
+                            }
+                        }
+                    }
+                }
+
+                // Nếu tải thành công, chạy file
                 Process.Start(new ProcessStartInfo
                 {
                     FileName = tempPath,
                     UseShellExecute = true
                 });
 
-                Application.Exit(); // Thoát app hiện tại để chạy bản cập nhật
+                Application.Exit();
+            }
+            catch (OperationCanceledException)
+            {
+                MessageBox.Show("Download was cancelled.");
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Không thể chạy file cài đặt: {ex.Message}");
+                MessageBox.Show($"Download error: {ex.Message}");
             }
+            finally
+            {
+                btn_install.Text = "Install";
+                lblProgress.Visible = false;
+                progressInstall.Visible = false;
+            }
+        }
+
+        private string FormatBytes(long bytes)
+        {
+            if (bytes >= 1073741824)
+                return $"{bytes / 1073741824.0:F2} GB";
+            if (bytes >= 1048576)
+                return $"{bytes / 1048576.0:F2} MB";
+            if (bytes >= 1024)
+                return $"{bytes / 1024.0:F2} KB";
+            return $"{bytes} B";
         }
     }
 }

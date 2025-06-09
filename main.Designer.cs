@@ -62,6 +62,8 @@
             this.propertyName = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.property = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.excelCol = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.progressInstall = new System.Windows.Forms.ProgressBar();
+            this.lblProgress = new System.Windows.Forms.Label();
             this.tabControl.SuspendLayout();
             this.tabPage1.SuspendLayout();
             this.tabPage2.SuspendLayout();
@@ -282,6 +284,8 @@
             // tabPage3
             // 
             this.tabPage3.BackColor = System.Drawing.Color.White;
+            this.tabPage3.Controls.Add(this.lblProgress);
+            this.tabPage3.Controls.Add(this.progressInstall);
             this.tabPage3.Controls.Add(this.panel1);
             this.tabPage3.Controls.Add(this.panel2);
             this.tabPage3.Controls.Add(this.btn_install);
@@ -302,7 +306,7 @@
             // 
             this.panel1.Controls.Add(this.label5);
             this.panel1.Controls.Add(this.pictureBox3);
-            this.panel1.Location = new System.Drawing.Point(253, 148);
+            this.panel1.Location = new System.Drawing.Point(253, 144);
             this.panel1.Margin = new System.Windows.Forms.Padding(4);
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(203, 113);
@@ -334,7 +338,7 @@
             // 
             this.panel2.Controls.Add(this.label4);
             this.panel2.Controls.Add(this.pictureBox2);
-            this.panel2.Location = new System.Drawing.Point(253, 148);
+            this.panel2.Location = new System.Drawing.Point(253, 144);
             this.panel2.Margin = new System.Windows.Forms.Padding(4);
             this.panel2.Name = "panel2";
             this.panel2.Size = new System.Drawing.Size(203, 113);
@@ -466,6 +470,24 @@
             this.excelCol.Name = "excelCol";
             this.excelCol.Width = 90;
             // 
+            // progressInstall
+            // 
+            this.progressInstall.Location = new System.Drawing.Point(12, 304);
+            this.progressInstall.Name = "progressInstall";
+            this.progressInstall.Size = new System.Drawing.Size(654, 23);
+            this.progressInstall.TabIndex = 27;
+            // 
+            // lblProgress
+            // 
+            this.lblProgress.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.lblProgress.AutoSize = true;
+            this.lblProgress.Location = new System.Drawing.Point(11, 285);
+            this.lblProgress.Name = "lblProgress";
+            this.lblProgress.Size = new System.Drawing.Size(93, 16);
+            this.lblProgress.TabIndex = 28;
+            this.lblProgress.Text = "100MB/100MB";
+            // 
             // Main
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
@@ -534,6 +556,8 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn propertyName;
         private System.Windows.Forms.DataGridViewTextBoxColumn property;
         private System.Windows.Forms.DataGridViewTextBoxColumn excelCol;
+        private System.Windows.Forms.ProgressBar progressInstall;
+        private System.Windows.Forms.Label lblProgress;
     }
 }
 
