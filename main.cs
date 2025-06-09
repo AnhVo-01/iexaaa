@@ -278,14 +278,14 @@ namespace IEXAAA
                         existing.TenSanPham = tenSanPham;
                         existing.UpdatedDate = currentTime;
                         sanPhamId = existing.Id;
-
-                        await _DbConnect.SaveChangesAsync();
                     }
 
                     foreach (var kvp in thuocTinhValues)
                     {
                         UpsertThuocTinh(sanPhamId, kvp.Key, kvp.Value, thuocTinhs, currentTime);
                     }
+
+                    await _DbConnect.SaveChangesAsync();
 
                     transaction.Commit(); // Chỉ commit khi mọi thứ xong xuôi
 
@@ -301,45 +301,35 @@ namespace IEXAAA
 
         private void UpsertThuocTinh(int spId, string maThuocTinh, string value, List<DMThuocTinh> thuocTinhs, DateTime time)
         {
-            try
+            if (string.IsNullOrWhiteSpace(value))
+                return;
+
+            var thuocTinhId = thuocTinhs.FirstOrDefault(x => x.MaThuocTinh.Equals(maThuocTinh, StringComparison.OrdinalIgnoreCase))?.Id;
+
+            if (thuocTinhId == null)
+                return;
+
+            var existing = _DbConnect.SanPhamThuocTinh
+                .FirstOrDefault(x => x.SanPhamId == spId
+                    && x.ThuocTinhSPId == thuocTinhId
+                    && x.FlagDel == 0);
+
+            if (existing == null)
             {
-                if (string.IsNullOrWhiteSpace(value))
-                    return;
-
-                var thuocTinhId = thuocTinhs
-                    .FirstOrDefault(x => x.MaThuocTinh.Equals(maThuocTinh, StringComparison.OrdinalIgnoreCase))?.Id;
-
-                if (thuocTinhId == null)
-                    return;
-
-                var existingThuocTinh = _DbConnect.SanPhamThuocTinh
-                    .FirstOrDefault(x => x.SanPhamId == spId
-                        && x.ThuocTinhSPId == thuocTinhId
-                        && x.FlagDel == 0);
-
-                if (existingThuocTinh == null)
+                _DbConnect.SanPhamThuocTinh.Add(new SanPhamThuocTinh
                 {
-                    _DbConnect.SanPhamThuocTinh.Add(new SanPhamThuocTinh
-                    {
-                        SanPhamId = spId,
-                        ThuocTinhSPId = thuocTinhId.Value,
-                        NoiDung = value,
-                        FlagDel = 0,
-                        CreatedDate = time,
-                        UpdatedDate = time
-                    });
-                }
-                else
-                {
-                    existingThuocTinh.NoiDung = value;
-                    existingThuocTinh.UpdatedDate = time;
-
-                    _DbConnect.SaveChanges();
-                }
+                    SanPhamId = spId,
+                    ThuocTinhSPId = thuocTinhId.Value,
+                    NoiDung = value,
+                    FlagDel = 0,
+                    CreatedDate = time,
+                    UpdatedDate = time
+                });
             }
-            catch (Exception ex)
+            else
             {
-                throw new Exception(ex.Message, ex);
+                existing.NoiDung = value;
+                existing.UpdatedDate = time;
             }
         }
 
@@ -386,6 +376,41 @@ namespace IEXAAA
             }
         }
 
+        private void btn_load_Click(object sender, EventArgs e)
+        {
+            var thuocTinhList = _DbConnect.DMThuocTinh
+                .Where(x => x.CongTyId == 1 && x.FlagDel == 0)
+                .ToList();
+
+            foreach (var prop in thuocTinhList)
+            {
+                string property = prop.TenThuocTinh;
+                string propertyCode = prop.MaThuocTinh;
+
+                // Tìm dòng có propertyCode tương ứng
+                bool updated = false;
+                foreach (DataGridViewRow row in dgvMapping.Rows)
+                {
+                    if (row.IsNewRow) continue;
+
+                    string existingCode = row.Cells["property"].Value?.ToString();
+                    if (existingCode == propertyCode)
+                    {
+                        // Nếu đã tồn tại, cập nhật lại property (giữ excelCol cũ)
+                        row.Cells["property"].Value = propertyCode;
+                        updated = true;
+                        break;
+                    }
+                }
+
+                // Nếu chưa có, thêm dòng mới
+                if (!updated)
+                {
+                    dgvMapping.Rows.Add(property, propertyCode, null); // excelCol để user chọn
+                }
+            }
+        }
+
         private void saveSetting(object sender, EventArgs e)
         {
             List<ColumnMapping> mappings = new List<ColumnMapping>();
@@ -418,41 +443,6 @@ namespace IEXAAA
             catch (Exception ex)
             {
                 MessageBox.Show("Error when saving the file:\n" + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void btn_load_Click(object sender, EventArgs e)
-        {
-            var thuocTinhList = _DbConnect.DMThuocTinh
-                .Where(x => x.CongTyId == 1 && x.FlagDel == 0)
-                .ToList();
-
-            foreach (var prop in thuocTinhList)
-            {
-                string property = prop.TenThuocTinh;
-                string propertyCode = prop.MaThuocTinh;
-
-                // Tìm dòng có propertyCode tương ứng
-                bool updated = false;
-                foreach (DataGridViewRow row in dgvMapping.Rows)
-                {
-                    if (row.IsNewRow) continue;
-
-                    string existingCode = row.Cells["property"].Value?.ToString();
-                    if (existingCode == propertyCode)
-                    {
-                        // Nếu đã tồn tại, cập nhật lại property (giữ excelCol cũ)
-                        row.Cells["property"].Value = property;
-                        updated = true;
-                        break;
-                    }
-                }
-
-                // Nếu chưa có, thêm dòng mới
-                if (!updated)
-                {
-                    dgvMapping.Rows.Add(property, propertyCode, null); // excelCol để user chọn
-                }
             }
         }
 
@@ -515,6 +505,8 @@ namespace IEXAAA
         private async void btn_install_Click(object sender, EventArgs e)
         {
             btn_install.Enabled = false;
+            btn_install.Text = "Downloading...";
+
             if (latestInstaller == null)
             {
                 MessageBox.Show("Không tìm thấy file cài đặt.");

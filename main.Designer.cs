@@ -40,13 +40,11 @@
             this.tabControl = new System.Windows.Forms.TabControl();
             this.tabPage1 = new System.Windows.Forms.TabPage();
             this.tabPage2 = new System.Windows.Forms.TabPage();
+            this.label3 = new System.Windows.Forms.Label();
             this.button3 = new System.Windows.Forms.Button();
             this.button1 = new System.Windows.Forms.Button();
             this.label2 = new System.Windows.Forms.Label();
             this.dgvMapping = new System.Windows.Forms.DataGridView();
-            this.Column1 = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.Column2 = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.Column3 = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.tabPage3 = new System.Windows.Forms.TabPage();
             this.panel1 = new System.Windows.Forms.Panel();
             this.label5 = new System.Windows.Forms.Label();
@@ -61,6 +59,9 @@
             this.label6 = new System.Windows.Forms.Label();
             this.button2 = new System.Windows.Forms.Button();
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
+            this.propertyName = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.property = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.excelCol = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.tabControl.SuspendLayout();
             this.tabPage1.SuspendLayout();
             this.tabPage2.SuspendLayout();
@@ -178,7 +179,7 @@
             this.tabControl.Controls.Add(this.tabPage3);
             this.tabControl.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tabControl.Location = new System.Drawing.Point(0, 0);
-            this.tabControl.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.tabControl.Margin = new System.Windows.Forms.Padding(4);
             this.tabControl.Name = "tabControl";
             this.tabControl.SelectedIndex = 0;
             this.tabControl.Size = new System.Drawing.Size(688, 427);
@@ -195,9 +196,9 @@
             this.tabPage1.Controls.Add(this.listBoxLog);
             this.tabPage1.Controls.Add(this.progressBar);
             this.tabPage1.Location = new System.Drawing.Point(4, 25);
-            this.tabPage1.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.tabPage1.Margin = new System.Windows.Forms.Padding(4);
             this.tabPage1.Name = "tabPage1";
-            this.tabPage1.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.tabPage1.Padding = new System.Windows.Forms.Padding(4);
             this.tabPage1.Size = new System.Drawing.Size(680, 398);
             this.tabPage1.TabIndex = 0;
             this.tabPage1.Text = "Home";
@@ -205,86 +206,78 @@
             // 
             // tabPage2
             // 
+            this.tabPage2.Controls.Add(this.label3);
             this.tabPage2.Controls.Add(this.button3);
             this.tabPage2.Controls.Add(this.button1);
             this.tabPage2.Controls.Add(this.label2);
             this.tabPage2.Controls.Add(this.dgvMapping);
             this.tabPage2.Location = new System.Drawing.Point(4, 25);
-            this.tabPage2.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.tabPage2.Margin = new System.Windows.Forms.Padding(4);
             this.tabPage2.Name = "tabPage2";
-            this.tabPage2.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.tabPage2.Padding = new System.Windows.Forms.Padding(4);
             this.tabPage2.Size = new System.Drawing.Size(680, 398);
             this.tabPage2.TabIndex = 1;
             this.tabPage2.Text = "Setting";
             this.tabPage2.UseVisualStyleBackColor = true;
             // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Location = new System.Drawing.Point(11, 327);
+            this.label3.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(452, 16);
+            this.label3.TabIndex = 9;
+            this.label3.Text = "- Select the row you want to delete and press the \"Delete\" on your keyboard";
+            // 
             // button3
             // 
             this.button3.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.button3.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.button3.Location = new System.Drawing.Point(576, 350);
+            this.button3.Location = new System.Drawing.Point(576, 359);
             this.button3.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.button3.Name = "button3";
             this.button3.Size = new System.Drawing.Size(92, 31);
             this.button3.TabIndex = 8;
             this.button3.Text = "Save";
             this.button3.UseVisualStyleBackColor = true;
+            this.button3.Click += new System.EventHandler(this.saveSetting);
             // 
             // button1
             // 
             this.button1.BackColor = System.Drawing.Color.LightYellow;
-            this.button1.Location = new System.Drawing.Point(423, 350);
-            this.button1.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.button1.Location = new System.Drawing.Point(421, 359);
+            this.button1.Margin = new System.Windows.Forms.Padding(4);
             this.button1.Name = "button1";
             this.button1.Size = new System.Drawing.Size(147, 31);
             this.button1.TabIndex = 2;
             this.button1.Text = "Load Properties";
             this.button1.UseVisualStyleBackColor = false;
+            this.button1.Click += new System.EventHandler(this.btn_load_Click);
             // 
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(11, 324);
+            this.label2.Location = new System.Drawing.Point(11, 309);
             this.label2.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(384, 16);
+            this.label2.Size = new System.Drawing.Size(391, 16);
             this.label2.TabIndex = 1;
-            this.label2.Text = "Click \"Load Properties\" to load all properties from the DataBase";
+            this.label2.Text = "- Click \"Load Properties\" to load all properties from the DataBase";
             // 
             // dgvMapping
             // 
             this.dgvMapping.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.dgvMapping.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
-            this.Column1,
-            this.Column2,
-            this.Column3});
+            this.propertyName,
+            this.property,
+            this.excelCol});
             this.dgvMapping.Location = new System.Drawing.Point(9, 9);
-            this.dgvMapping.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.dgvMapping.Margin = new System.Windows.Forms.Padding(4);
             this.dgvMapping.Name = "dgvMapping";
             this.dgvMapping.RowHeadersWidth = 51;
-            this.dgvMapping.Size = new System.Drawing.Size(659, 298);
+            this.dgvMapping.Size = new System.Drawing.Size(659, 294);
             this.dgvMapping.TabIndex = 0;
-            // 
-            // Column1
-            // 
-            this.Column1.HeaderText = "PropertyName";
-            this.Column1.MinimumWidth = 6;
-            this.Column1.Name = "Column1";
-            this.Column1.Width = 200;
-            // 
-            // Column2
-            // 
-            this.Column2.HeaderText = "PropertyCode";
-            this.Column2.MinimumWidth = 6;
-            this.Column2.Name = "Column2";
-            this.Column2.Width = 150;
-            // 
-            // Column3
-            // 
-            this.Column3.HeaderText = "ExcelColumn";
-            this.Column3.MinimumWidth = 6;
-            this.Column3.Name = "Column3";
-            this.Column3.Width = 125;
             // 
             // tabPage3
             // 
@@ -299,7 +292,7 @@
             this.tabPage3.Controls.Add(this.button2);
             this.tabPage3.Controls.Add(this.pictureBox1);
             this.tabPage3.Location = new System.Drawing.Point(4, 25);
-            this.tabPage3.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.tabPage3.Margin = new System.Windows.Forms.Padding(4);
             this.tabPage3.Name = "tabPage3";
             this.tabPage3.Size = new System.Drawing.Size(680, 398);
             this.tabPage3.TabIndex = 2;
@@ -310,7 +303,7 @@
             this.panel1.Controls.Add(this.label5);
             this.panel1.Controls.Add(this.pictureBox3);
             this.panel1.Location = new System.Drawing.Point(253, 148);
-            this.panel1.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.panel1.Margin = new System.Windows.Forms.Padding(4);
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(203, 113);
             this.panel1.TabIndex = 26;
@@ -330,7 +323,7 @@
             // 
             this.pictureBox3.Image = ((System.Drawing.Image)(resources.GetObject("pictureBox3.Image")));
             this.pictureBox3.Location = new System.Drawing.Point(71, 5);
-            this.pictureBox3.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.pictureBox3.Margin = new System.Windows.Forms.Padding(4);
             this.pictureBox3.Name = "pictureBox3";
             this.pictureBox3.Size = new System.Drawing.Size(67, 62);
             this.pictureBox3.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
@@ -342,7 +335,7 @@
             this.panel2.Controls.Add(this.label4);
             this.panel2.Controls.Add(this.pictureBox2);
             this.panel2.Location = new System.Drawing.Point(253, 148);
-            this.panel2.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.panel2.Margin = new System.Windows.Forms.Padding(4);
             this.panel2.Name = "panel2";
             this.panel2.Size = new System.Drawing.Size(203, 113);
             this.panel2.TabIndex = 25;
@@ -362,7 +355,7 @@
             // 
             this.pictureBox2.Image = ((System.Drawing.Image)(resources.GetObject("pictureBox2.Image")));
             this.pictureBox2.Location = new System.Drawing.Point(68, 4);
-            this.pictureBox2.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.pictureBox2.Margin = new System.Windows.Forms.Padding(4);
             this.pictureBox2.Name = "pictureBox2";
             this.pictureBox2.Size = new System.Drawing.Size(67, 62);
             this.pictureBox2.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
@@ -374,10 +367,10 @@
             this.btn_install.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.btn_install.BackColor = System.Drawing.Color.Gainsboro;
             this.btn_install.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btn_install.Location = new System.Drawing.Point(407, 354);
+            this.btn_install.Location = new System.Drawing.Point(401, 354);
             this.btn_install.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.btn_install.Name = "btn_install";
-            this.btn_install.Size = new System.Drawing.Size(115, 31);
+            this.btn_install.Size = new System.Drawing.Size(121, 31);
             this.btn_install.TabIndex = 22;
             this.btn_install.Text = "Install";
             this.btn_install.UseVisualStyleBackColor = false;
@@ -387,7 +380,7 @@
             // 
             this.checkLoad.Image = ((System.Drawing.Image)(resources.GetObject("checkLoad.Image")));
             this.checkLoad.Location = new System.Drawing.Point(272, 167);
-            this.checkLoad.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.checkLoad.Margin = new System.Windows.Forms.Padding(4);
             this.checkLoad.Name = "checkLoad";
             this.checkLoad.Size = new System.Drawing.Size(133, 62);
             this.checkLoad.SizeMode = System.Windows.Forms.PictureBoxSizeMode.CenterImage;
@@ -445,12 +438,33 @@
             this.pictureBox1.BackColor = System.Drawing.Color.White;
             this.pictureBox1.Image = ((System.Drawing.Image)(resources.GetObject("pictureBox1.Image")));
             this.pictureBox1.Location = new System.Drawing.Point(12, 340);
-            this.pictureBox1.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.pictureBox1.Margin = new System.Windows.Forms.Padding(4);
             this.pictureBox1.Name = "pictureBox1";
             this.pictureBox1.Size = new System.Drawing.Size(47, 46);
             this.pictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.pictureBox1.TabIndex = 16;
             this.pictureBox1.TabStop = false;
+            // 
+            // propertyName
+            // 
+            this.propertyName.HeaderText = "PropertyName";
+            this.propertyName.MinimumWidth = 6;
+            this.propertyName.Name = "propertyName";
+            this.propertyName.Width = 200;
+            // 
+            // property
+            // 
+            this.property.HeaderText = "PropertyCode";
+            this.property.MinimumWidth = 6;
+            this.property.Name = "property";
+            this.property.Width = 150;
+            // 
+            // excelCol
+            // 
+            this.excelCol.HeaderText = "ExcelColumn";
+            this.excelCol.MinimumWidth = 6;
+            this.excelCol.Name = "excelCol";
+            this.excelCol.Width = 90;
             // 
             // Main
             // 
@@ -503,9 +517,6 @@
         private System.Windows.Forms.Button button1;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Button button3;
-        private System.Windows.Forms.DataGridViewTextBoxColumn Column1;
-        private System.Windows.Forms.DataGridViewTextBoxColumn Column2;
-        private System.Windows.Forms.DataGridViewTextBoxColumn Column3;
         private System.Windows.Forms.PictureBox pictureBox1;
         private System.Windows.Forms.Label appVersion;
         private System.Windows.Forms.Label label7;
@@ -519,6 +530,10 @@
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.Panel panel1;
         private System.Windows.Forms.Label label5;
+        private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.DataGridViewTextBoxColumn propertyName;
+        private System.Windows.Forms.DataGridViewTextBoxColumn property;
+        private System.Windows.Forms.DataGridViewTextBoxColumn excelCol;
     }
 }
 
