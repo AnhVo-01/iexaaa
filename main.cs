@@ -140,6 +140,9 @@ namespace IEXAAA
             }
 
             int processedRows = 0;
+            int successCount = 0;
+            int errorCount = 0;
+
             var thuocTinhList = await _DbConnect.DMThuocTinh
                 .Where(x => x.FlagDel == 0 && x.CongTyId == 1)
                 .ToListAsync();
@@ -199,7 +202,7 @@ namespace IEXAAA
                     var newDict = thuocTinhValues.Where(kvp => kvp.Key != "tenSanPham").ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                     await UpsertSanPhamAsync(maSPNB, maSPKH, thuocTinhValues["tenSanPham"], newDict, thuocTinhList, currentTime);
 
-
+                    successCount++;
                     processedRows++;
                     int percent = (int)((double)processedRows / totalRows * 100);
 
@@ -212,6 +215,7 @@ namespace IEXAAA
                 }
                 catch (Exception ex)
                 {
+                    errorCount++;
                     processedRows++;
                     int percent = (int)((double)processedRows / totalRows * 100);
 
@@ -228,13 +232,19 @@ namespace IEXAAA
             {
                 Invoke(() =>
                 {
-                    listBoxLog.Items.Add("Finished!");
+                    listBoxLog.Items.Add($"Finished!");
+                    listBoxLog.Items.Add($"✔️ Success: {successCount} products");
+                    listBoxLog.Items.Add($"❌ Error: {errorCount} products");
                     listBoxLog.TopIndex = listBoxLog.Items.Count - 1;
+
                     btn_import.Text = "Finish";
                     btn_import.Enabled = true;
                     btn_cancel.Enabled = false;
+
+                    //MessageBox.Show($"Import complete!\n\n✔️ Success: {successCount}\n❌ Error: {errorCount}", "Import Completed", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 });
             }
+
         }
 
         // Hàm Invoke an toàn khi đang chạy background

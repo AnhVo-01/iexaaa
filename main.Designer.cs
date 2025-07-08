@@ -45,7 +45,12 @@
             this.button1 = new System.Windows.Forms.Button();
             this.label2 = new System.Windows.Forms.Label();
             this.dgvMapping = new System.Windows.Forms.DataGridView();
+            this.propertyName = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.property = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.excelCol = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.tabPage3 = new System.Windows.Forms.TabPage();
+            this.lblProgress = new System.Windows.Forms.Label();
+            this.progressInstall = new System.Windows.Forms.ProgressBar();
             this.panel1 = new System.Windows.Forms.Panel();
             this.label5 = new System.Windows.Forms.Label();
             this.pictureBox3 = new System.Windows.Forms.PictureBox();
@@ -59,11 +64,6 @@
             this.label6 = new System.Windows.Forms.Label();
             this.button2 = new System.Windows.Forms.Button();
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
-            this.propertyName = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.property = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.excelCol = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.progressInstall = new System.Windows.Forms.ProgressBar();
-            this.lblProgress = new System.Windows.Forms.Label();
             this.tabControl.SuspendLayout();
             this.tabPage1.SuspendLayout();
             this.tabPage2.SuspendLayout();
@@ -281,6 +281,27 @@
             this.dgvMapping.Size = new System.Drawing.Size(659, 294);
             this.dgvMapping.TabIndex = 0;
             // 
+            // propertyName
+            // 
+            this.propertyName.HeaderText = "PropertyName";
+            this.propertyName.MinimumWidth = 6;
+            this.propertyName.Name = "propertyName";
+            this.propertyName.Width = 200;
+            // 
+            // property
+            // 
+            this.property.HeaderText = "PropertyCode";
+            this.property.MinimumWidth = 6;
+            this.property.Name = "property";
+            this.property.Width = 150;
+            // 
+            // excelCol
+            // 
+            this.excelCol.HeaderText = "ExcelColumn";
+            this.excelCol.MinimumWidth = 6;
+            this.excelCol.Name = "excelCol";
+            this.excelCol.Width = 90;
+            // 
             // tabPage3
             // 
             this.tabPage3.BackColor = System.Drawing.Color.White;
@@ -302,11 +323,29 @@
             this.tabPage3.TabIndex = 2;
             this.tabPage3.Text = "About";
             // 
+            // lblProgress
+            // 
+            this.lblProgress.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.lblProgress.AutoSize = true;
+            this.lblProgress.Location = new System.Drawing.Point(11, 285);
+            this.lblProgress.Name = "lblProgress";
+            this.lblProgress.Size = new System.Drawing.Size(93, 16);
+            this.lblProgress.TabIndex = 28;
+            this.lblProgress.Text = "100MB/100MB";
+            // 
+            // progressInstall
+            // 
+            this.progressInstall.Location = new System.Drawing.Point(12, 304);
+            this.progressInstall.Name = "progressInstall";
+            this.progressInstall.Size = new System.Drawing.Size(654, 23);
+            this.progressInstall.TabIndex = 27;
+            // 
             // panel1
             // 
             this.panel1.Controls.Add(this.label5);
             this.panel1.Controls.Add(this.pictureBox3);
-            this.panel1.Location = new System.Drawing.Point(253, 144);
+            this.panel1.Location = new System.Drawing.Point(253, 151);
             this.panel1.Margin = new System.Windows.Forms.Padding(4);
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(203, 113);
@@ -338,7 +377,7 @@
             // 
             this.panel2.Controls.Add(this.label4);
             this.panel2.Controls.Add(this.pictureBox2);
-            this.panel2.Location = new System.Drawing.Point(253, 144);
+            this.panel2.Location = new System.Drawing.Point(253, 151);
             this.panel2.Margin = new System.Windows.Forms.Padding(4);
             this.panel2.Name = "panel2";
             this.panel2.Size = new System.Drawing.Size(203, 113);
@@ -383,10 +422,10 @@
             // checkLoad
             // 
             this.checkLoad.Image = ((System.Drawing.Image)(resources.GetObject("checkLoad.Image")));
-            this.checkLoad.Location = new System.Drawing.Point(272, 167);
+            this.checkLoad.Location = new System.Drawing.Point(324, 155);
             this.checkLoad.Margin = new System.Windows.Forms.Padding(4);
             this.checkLoad.Name = "checkLoad";
-            this.checkLoad.Size = new System.Drawing.Size(133, 62);
+            this.checkLoad.Size = new System.Drawing.Size(67, 62);
             this.checkLoad.SizeMode = System.Windows.Forms.PictureBoxSizeMode.CenterImage;
             this.checkLoad.TabIndex = 21;
             this.checkLoad.TabStop = false;
@@ -448,45 +487,6 @@
             this.pictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.pictureBox1.TabIndex = 16;
             this.pictureBox1.TabStop = false;
-            // 
-            // propertyName
-            // 
-            this.propertyName.HeaderText = "PropertyName";
-            this.propertyName.MinimumWidth = 6;
-            this.propertyName.Name = "propertyName";
-            this.propertyName.Width = 200;
-            // 
-            // property
-            // 
-            this.property.HeaderText = "PropertyCode";
-            this.property.MinimumWidth = 6;
-            this.property.Name = "property";
-            this.property.Width = 150;
-            // 
-            // excelCol
-            // 
-            this.excelCol.HeaderText = "ExcelColumn";
-            this.excelCol.MinimumWidth = 6;
-            this.excelCol.Name = "excelCol";
-            this.excelCol.Width = 90;
-            // 
-            // progressInstall
-            // 
-            this.progressInstall.Location = new System.Drawing.Point(12, 304);
-            this.progressInstall.Name = "progressInstall";
-            this.progressInstall.Size = new System.Drawing.Size(654, 23);
-            this.progressInstall.TabIndex = 27;
-            // 
-            // lblProgress
-            // 
-            this.lblProgress.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.lblProgress.AutoSize = true;
-            this.lblProgress.Location = new System.Drawing.Point(11, 285);
-            this.lblProgress.Name = "lblProgress";
-            this.lblProgress.Size = new System.Drawing.Size(93, 16);
-            this.lblProgress.TabIndex = 28;
-            this.lblProgress.Text = "100MB/100MB";
             // 
             // Main
             // 
