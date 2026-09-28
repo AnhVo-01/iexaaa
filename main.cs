@@ -295,7 +295,7 @@ namespace IEXAAA
                 try
                 {
                     var existing = await _DbConnect.DMSanPham
-                        .FirstOrDefaultAsync(x => x.FlagDel == 0 && x.MaSPNB.Trim() == maSPNB);
+                        .FirstOrDefaultAsync(x => x.CongTyId == congTyId &&  x.FlagDel == 0 && x.MaSPNB.Trim() == maSPNB);
 
                     int sanPhamId;
 

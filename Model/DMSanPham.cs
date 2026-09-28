@@ -7,7 +7,7 @@ namespace Model
     public class DMSanPham
     {
         public int Id { get; set; }
-        public int? CongTyId { get; set; }
+        public int CongTyId { get; set; }
         public int? ParentId { get; set; }
         public string MaSPKH { get; set; }
         public string MaSPNB { get; set; }
