@@ -23,6 +23,8 @@ namespace IEXAAA
     public partial class Main : Form
     {
         private readonly IEDBContext _DbConnect;
+        private readonly HSNSContext _HSNSContext;
+
         private volatile bool isCancelled = false;
         private GithubAsset latestInstaller;
         private CancellationTokenSource downloadCts;
@@ -31,6 +33,8 @@ namespace IEXAAA
         {
             InitializeComponent();
             _DbConnect = new IEDBContext();
+            _HSNSContext = new HSNSContext();
+
             appVersion.Text = "Current version: " + Assembly.GetExecutingAssembly().GetName().Version.ToString();
 
             btn_import.Enabled = false;
@@ -79,12 +83,17 @@ namespace IEXAAA
                 return;
             }
 
+            if (!TryGetSelectedCongTyId(out int congTyId))
+            {
+                return;
+            }
+
             try
             {
                 btn_cancel.Visible = true;
                 btn_import.Enabled = false;
                 btn_select.Enabled = false;
-                await Task.Run(() => ProcessFile(filePath));
+                await Task.Run(() => ProcessFile(filePath, congTyId));
             }
             catch (Exception ex)
             {
@@ -95,6 +104,35 @@ namespace IEXAAA
         private void Main_Load(object sender, EventArgs e)
         {
             tabControl.SelectedIndexChanged += tabControl_SelectedIndexChanged;
+            LoadCompanies();
+            LoadColumnMappingFromJson();
+        }
+
+        private void LoadCompanies()
+        {
+            cbCompany.DataSource = _HSNSContext.CongTy.Where(x => x.FlagDel == 0).ToList();
+            cbCompany.DisplayMember = "MaCongTy";
+            cbCompany.ValueMember = "Id";
+            cbCompany.SelectedIndex = -1;
+        }
+
+        private int? GetSelectedCongTyId()
+        {
+            return cbCompany.SelectedValue as int?;
+        }
+
+        private bool TryGetSelectedCongTyId(out int congTyId)
+        {
+            var selected = GetSelectedCongTyId();
+            if (selected == null)
+            {
+                MessageBox.Show("Please select a Company first.", "Notification", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                congTyId = 0;
+                return false;
+            }
+
+            congTyId = selected.Value;
+            return true;
         }
 
         private void tabControl_SelectedIndexChanged(object sender, EventArgs e)
@@ -113,7 +151,7 @@ namespace IEXAAA
             btn_import.Enabled = !string.IsNullOrWhiteSpace(file_url.Text);
         }
 
-        private async void ProcessFile(string filePath)
+        private async void ProcessFile(string filePath, int congTyId)
         {
             var currentTime = DateTime.Now;
             var workbook = new Workbook();
@@ -144,7 +182,7 @@ namespace IEXAAA
             int errorCount = 0;
 
             var thuocTinhList = await _DbConnect.DMThuocTinh
-                .Where(x => x.FlagDel == 0 && x.CongTyId == 1)
+                .Where(x => x.FlagDel == 0 && x.CongTyId == congTyId)
                 .ToListAsync();
 
             for (int i = startRow + 1; i <= endRow; i++)
@@ -180,13 +218,7 @@ namespace IEXAAA
                     string tenSanPham = "";
 
                     // Load từ JSON
-                    string jsonPath = Path.Combine(Application.StartupPath, "column_mapping.json");
-
-                    if (!File.Exists(jsonPath))
-                        return;
-
-                    string json = File.ReadAllText(jsonPath);
-                    var columnMappings = JsonSerializer.Deserialize<List<ColumnMapping>>(json);
+                    var columnMappings = LoadMappingSettings().Mappings;
                     var thuocTinhValues = new Dictionary<string, string>();
 
                     foreach (var kvp in columnMappings)
@@ -200,7 +232,7 @@ namespace IEXAAA
 
                     // Gọi hàm xử lý
                     var newDict = thuocTinhValues.Where(kvp => kvp.Key != "tenSanPham").ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                    await UpsertSanPhamAsync(maSPNB, maSPKH, thuocTinhValues["tenSanPham"], newDict, thuocTinhList, currentTime);
+                    await UpsertSanPhamAsync(maSPNB, maSPKH, thuocTinhValues["tenSanPham"], newDict, thuocTinhList, currentTime, congTyId);
 
                     successCount++;
                     processedRows++;
@@ -256,16 +288,14 @@ namespace IEXAAA
                 action();
         }
 
-        public async Task<int> UpsertSanPhamAsync(string maSPNB, string maSPKH, string tenSanPham, Dictionary<string, string> thuocTinhValues, List<DMThuocTinh> thuocTinhs, DateTime currentTime)
+        public async Task<int> UpsertSanPhamAsync(string maSPNB, string maSPKH, string tenSanPham, Dictionary<string, string> thuocTinhValues, List<DMThuocTinh> thuocTinhs, DateTime currentTime, int congTyId)
         {
             using(var transaction = _DbConnect.Database.BeginTransaction())
             {
                 try
                 {
                     var existing = await _DbConnect.DMSanPham
-                        .FirstOrDefaultAsync(x => x.FlagDel == 0
-                            && x.MaSPNB.Trim() == maSPNB
-                            && x.MaSPKH.Trim() == maSPKH);
+                        .FirstOrDefaultAsync(x => x.FlagDel == 0 && x.MaSPNB.Trim() == maSPNB);
 
                     int sanPhamId;
 
@@ -273,10 +303,11 @@ namespace IEXAAA
                     {
                         var newSP = new DMSanPham
                         {
-                            CongTyId = 1,
+                            CongTyId = congTyId,
                             MaSPNB = maSPNB,
                             MaSPKH = maSPKH,
                             TenSanPham = tenSanPham,
+                            ThuocTinhSP = SerializeThuocTinh(new Dictionary<string, string>(), thuocTinhValues, thuocTinhs),
                             HoatDong = 1,
                             FlagDel = 0,
                             CreatedDate = currentTime,
@@ -289,14 +320,12 @@ namespace IEXAAA
                     }
                     else
                     {
+                        var currentThuocTinh = DeserializeThuocTinh(existing.ThuocTinhSP);
+
                         existing.TenSanPham = tenSanPham;
+                        existing.ThuocTinhSP = SerializeThuocTinh(currentThuocTinh, thuocTinhValues, thuocTinhs);
                         existing.UpdatedDate = currentTime;
                         sanPhamId = existing.Id;
-                    }
-
-                    foreach (var kvp in thuocTinhValues)
-                    {
-                        UpsertThuocTinh(sanPhamId, kvp.Key, kvp.Value, thuocTinhs, currentTime);
                     }
 
                     await _DbConnect.SaveChangesAsync();
@@ -313,38 +342,37 @@ namespace IEXAAA
             }
         }
 
-        private void UpsertThuocTinh(int spId, string maThuocTinh, string value, List<DMThuocTinh> thuocTinhs, DateTime time)
+        private Dictionary<string, string> DeserializeThuocTinh(string json)
         {
-            if (string.IsNullOrWhiteSpace(value))
-                return;
+            if (string.IsNullOrWhiteSpace(json))
+                return new Dictionary<string, string>();
 
-            var thuocTinhId = thuocTinhs.FirstOrDefault(x => x.MaThuocTinh.Equals(maThuocTinh, StringComparison.OrdinalIgnoreCase))?.Id;
-
-            if (thuocTinhId == null)
-                return;
-
-            var existing = _DbConnect.SanPhamThuocTinh
-                .FirstOrDefault(x => x.SanPhamId == spId
-                    && x.ThuocTinhSPId == thuocTinhId
-                    && x.FlagDel == 0);
-
-            if (existing == null)
+            try
             {
-                _DbConnect.SanPhamThuocTinh.Add(new SanPhamThuocTinh
-                {
-                    SanPhamId = spId,
-                    ThuocTinhSPId = thuocTinhId.Value,
-                    NoiDung = value,
-                    FlagDel = 0,
-                    CreatedDate = time,
-                    UpdatedDate = time
-                });
+                return JsonSerializer.Deserialize<Dictionary<string, string>>(json) ?? new Dictionary<string, string>();
             }
-            else
+            catch (JsonException)
             {
-                existing.NoiDung = value;
-                existing.UpdatedDate = time;
+                return new Dictionary<string, string>();
             }
+        }
+
+        private string SerializeThuocTinh(Dictionary<string, string> currentValues, Dictionary<string, string> newValues, List<DMThuocTinh> thuocTinhs)
+        {
+            foreach (var kvp in newValues)
+            {
+                if (string.IsNullOrWhiteSpace(kvp.Value))
+                    continue;
+
+                var maThuocTinh = thuocTinhs.FirstOrDefault(x => x.MaThuocTinh.Equals(kvp.Key, StringComparison.OrdinalIgnoreCase))?.MaThuocTinh;
+
+                if (maThuocTinh == null)
+                    continue;
+
+                currentValues[maThuocTinh] = kvp.Value;
+            }
+
+            return JsonSerializer.Serialize(currentValues);
         }
 
         private void btn_cancel_Click(object sender, EventArgs e)
@@ -372,28 +400,63 @@ namespace IEXAAA
             }
         }
 
-        private void LoadColumnMappingFromJson()
+        private MappingSettings LoadMappingSettings()
         {
             string jsonPath = Path.Combine(Application.StartupPath, "column_mapping.json");
 
             if (!File.Exists(jsonPath))
-                return;
+                return new MappingSettings();
 
             string json = File.ReadAllText(jsonPath);
-            var mappings = JsonSerializer.Deserialize<List<ColumnMapping>>(json);
+
+            try
+            {
+                var settings = JsonSerializer.Deserialize<MappingSettings>(json);
+                if (settings != null)
+                    return settings;
+            }
+            catch (JsonException)
+            {
+                // File cũ chỉ chứa mảng ColumnMapping, rơi xuống nhánh bên dưới để đọc theo định dạng cũ
+            }
+
+            try
+            {
+                var mappings = JsonSerializer.Deserialize<List<ColumnMapping>>(json);
+                return new MappingSettings { Mappings = mappings ?? new List<ColumnMapping>() };
+            }
+            catch (JsonException)
+            {
+                return new MappingSettings();
+            }
+        }
+
+        private void LoadColumnMappingFromJson()
+        {
+            var settings = LoadMappingSettings();
 
             dgvMapping.Rows.Clear(); // clear old data
 
-            foreach (var mapping in mappings)
+            foreach (var mapping in settings.Mappings)
             {
                 dgvMapping.Rows.Add(mapping.Property, mapping.PropertyCode, mapping.ExcelCol);
+            }
+
+            if (settings.CongTyId.HasValue)
+            {
+                cbCompany.SelectedValue = settings.CongTyId.Value;
             }
         }
 
         private void btn_load_Click(object sender, EventArgs e)
         {
+            if (!TryGetSelectedCongTyId(out int congTyId))
+            {
+                return;
+            }
+
             var thuocTinhList = _DbConnect.DMThuocTinh
-                .Where(x => x.CongTyId == 1 && x.FlagDel == 0)
+                .Where(x => x.CongTyId == congTyId && x.FlagDel == 0)
                 .ToList();
 
             foreach (var prop in thuocTinhList)
@@ -427,6 +490,11 @@ namespace IEXAAA
 
         private void saveSetting(object sender, EventArgs e)
         {
+            if (!TryGetSelectedCongTyId(out int congTyId))
+            {
+                return;
+            }
+
             List<ColumnMapping> mappings = new List<ColumnMapping>();
 
             foreach (DataGridViewRow row in dgvMapping.Rows)
@@ -443,8 +511,10 @@ namespace IEXAAA
                 mappings.Add(mapping);
             }
 
+            var settings = new MappingSettings { CongTyId = congTyId, Mappings = mappings };
+
             // Chuyển đổi thành JSON
-            string json = JsonSerializer.Serialize(mappings, new JsonSerializerOptions { WriteIndented = true });
+            string json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
 
             // Đường dẫn mặc định (AppDomain.CurrentDomain.BaseDirectory) sẽ lưu file ngay cạnh file .exe
             string outputPath = Path.Combine(Application.StartupPath, "column_mapping.json");

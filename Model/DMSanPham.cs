@@ -12,6 +12,7 @@ namespace Model
         public string MaSPKH { get; set; }
         public string MaSPNB { get; set; }
         public string TenSanPham { get; set; }
+        public string ThuocTinhSP { get; set; }
         public string GhiChu { get; set; }
         public int HoatDong { get; set; }
         public int? NhomSanPhamId { get; set; }

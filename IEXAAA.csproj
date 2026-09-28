@@ -195,16 +195,19 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DBConnect\HSNSContext.cs" />
     <Compile Include="DBConnect\IEDBContext.cs" />
     <Compile Include="Dto\ColumnMapping.cs" />
     <Compile Include="Dto\GithubAsset.cs" />
     <Compile Include="Dto\GithubRelease.cs" />
+    <Compile Include="Dto\MappingSettings.cs" />
     <Compile Include="main.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="main.Designer.cs">
       <DependentUpon>main.cs</DependentUpon>
     </Compile>
+    <Compile Include="Model\CongTy.cs" />
     <Compile Include="Model\DMSanPham.cs" />
     <Compile Include="Model\SanPhamThuocTinh.cs" />
     <Compile Include="Model\DMThuocTinhSanPham.cs" />
